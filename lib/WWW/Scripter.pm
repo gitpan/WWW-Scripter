@@ -2,7 +2,7 @@ use 5.006;
 
 package WWW::Scripter;
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis bareword';
 
@@ -198,7 +198,8 @@ sub update_html {
 
 	# Restore an existing document (in case we are coming back from
 	# another page).
-	if(my $doc = $document{$self->{res}}) {
+	my $res = $self->{res};
+	if(my $doc = $document{$res}) {
 		$self->document($doc);
 		$self->{form} = ($self->{forms} = $doc->forms)->[0];
 		return;
@@ -207,8 +208,8 @@ sub update_html {
 	my $life_raft = $self;
 	weaken($self);
 
-	$self->document(my $tree = new HTML::DOM
-			response => $self->response,
+	$self->document($document{$res} = my $tree = new HTML::DOM
+			response => $res,
 			cookie_jar => $self->cookie_jar);
 
 	$tree->error_handler(sub{$self->warn($@)});
@@ -221,7 +222,7 @@ sub update_html {
 	});
 
 	if(%{$script_handlers{$self}}) {
-		my $script_type = $self->response->header(
+		my $script_type = $res->header(
 			'Content-Script-Type');
 		defined $script_type or $tree->elem_handler(meta =>
 		    sub {
@@ -335,8 +336,10 @@ sub update_html {
 	# Find out the encoding:
 	my $cs = {
 		map @$_,
-		split_header_words $self->response->header('Content-Type')
+		split_header_words $res->header('Content-Type')
 	 }->{charset};
+	$cs or $res->can('content_charset')
+	       and $cs = $res->content_charset;
 	$tree->charset($cs||'iso-8859-1');
 
 	$tree->write(defined $cs ? decode $cs, $src : $src);
@@ -689,8 +692,8 @@ use Scalar::Util 'weaken';
 
 History notes
 
-A history object is a blessed array ref. That array ref holds items in its
-history. Each item is itself an array ref containing:
+A history object is a blessed array ref. That array ref holds the browser
+history entries. Each entry is itself an array ref containing:
 
 0 - request object
 1 - response object
