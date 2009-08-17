@@ -2,7 +2,7 @@ use 5.006;
 
 package WWW::Scripter;
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
 use strict; use warnings; no warnings qw 'utf8 parenthesis bareword';
 
@@ -504,9 +504,10 @@ sub history { $_[0]{page_stack} }
 
 sub frames {
  my $doc = $_[0]->document;
- my $frames = $frames{$doc} ||= WWW::Scripter'Frames->new( $doc );
- wantarray ? @$frames : $frames
-}
+ my $frames = $frames{$doc||''}         # the ||'' is for non-HTML docu-
+  ||= WWW::Scripter'Frames->new( $_[0], $doc );  # ments, which all share
+ wantarray ? @$frames : $frames                          # an empty frames
+}                                                              # collection
 
 sub window { $_[0] }
 *self = *window;
@@ -1127,16 +1128,19 @@ our @ISA = "HTML::DOM::Collection";
 
 {
 	Hash'Util'FieldHash'Compat'fieldhash my %w;
-	
+	my @empty_array;
 	
 	sub new {
-		; my($pack,$doc) = @_
+		; my($pack,$window,$doc) = @_
 		; my $ret = $pack->SUPER'new(
-		  HTML::DOM::NodeList::Magic->new(
-		    sub { $doc->look_down(_tag => qr/^i?frame\z/) },
-		    $doc
-		  ))
-		; $w{$ret} = $doc->defaultView
+		   $doc
+		    ? HTML::DOM::NodeList::Magic->new(
+		       sub { $doc->look_down(_tag => qr/^i?frame\z/) },
+		       $doc
+		      )
+		    : HTML'DOM'NodeList->new(\@empty_array)
+		  )
+		; $w{$ret} = $window
 		; $ret
 	}
 	

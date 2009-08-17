@@ -631,3 +631,11 @@ use tests 1; # re-use of document objects when browsing history
  like join('-',@refaddrs), qr/^(\d+)-(?!\1)\d+-\1\z/,
   'going back reuses the same document object';
 }
+
+use tests 2; # frames method with non-HTML documents
+{            # This used to die before version 0.004
+ my $w = new WWW::Scripter;
+ $w->get("data:text/plain,");
+ is +()=$w->frames, 0, 'frames returns 0 in list context with a text doc';
+ is @{ $w->frames }, 0, 'frames collection is empty with a text doc';
+}
